@@ -3,70 +3,94 @@
 # FILENAME: perceptron.py
 # SPECIFICATION: build a single-layer and multi-layer perceptron for handwritten digit classification
 # FOR: CS 4210- Assignment #3
-# TIME SPENT: ~
+# TIME SPENT: ~ 4 hrs
 #-----------------------------------------------------------*/
 
 #IMPORTANT NOTE: YOU ARE ALLOWED TO USE ANY PYTHON LIBRARY TO COMPLETE THIS PROGRAM
 
-#importing some Python libraries
+# importing some libraries
 from sklearn.linear_model import Perceptron
-from sklearn.neural_network import MLPClassifier #pip install scikit-learn==0.18.rc2 if needed
+from sklearn.neural_network import MLPClassifier
 import numpy as np
 import pandas as pd
 
+
+# n is learnign rate ; r is shuffle
 n = [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0]
 r = [True, False]
 
-df = pd.read_csv('optdigits.tra', sep=',', header=None) #reading the data by using Pandas library
+# read datasets
+df = pd.read_csv('optdigits.tra', sep=',', header=None)
+X_training = np.array(df.values)[:, :64].astype(float)
+y_training = np.array(df.values)[:, -1].astype(int)
 
-X_training = np.array(df.values)[:,:64] #getting the first 64 fields to form the feature data for training
-y_training = np.array(df.values)[:,-1]  #getting the last field to form the class label for training
+df = pd.read_csv('optdigits.tes', sep=',', header=None)
+X_test = np.array(df.values)[:, :64].astype(float)
+y_test = np.array(df.values)[:, -1].astype(int)
 
-df = pd.read_csv('optdigits.tes', sep=',', header=None) #reading the data by using Pandas library
+#trackers
+best_acc_perceptron = 0.0
+best_params_perceptron = None
 
-X_test = np.array(df.values)[:,:64]    #getting the first 64 fields to form the feature data for test
-y_test = np.array(df.values)[:,-1]     #getting the last field to form the class label for test
+best_acc_mlp = 0.0
+best_params_mlp = None
 
-for : #iterates over n
+total_runs = 0
+for lr in n:
+    for shuffle in r:
+        # iterate over algorithms
+        for algo in ['Perceptron', 'MLP']:
+            total_runs += 1
 
-    for : #iterates over r
+            if algo == 'Perceptron':
+                #single-layer perceptron
+                # eta0 = learning rate, shuffle = shuffle training data
+                clf = Perceptron(eta0=lr, shuffle=shuffle, max_iter=1000, random_state=0)
+            else:
+                # multi-layer perceptron (1 hidden layer with 25 neurons; logistic activation)
+                clf = MLPClassifier(activation='logistic',
+                                    learning_rate_init=lr,
+                                    hidden_layer_sizes=(25,),
+                                    shuffle=shuffle,
+                                    max_iter=1000,
+                                    random_state=0)
 
-        #iterates over both algorithms
-        #-->add your Python code here
-
-        for : #iterates over the algorithms
-
-            #Create a Neural Network classifier
-            #if Perceptron then
-            #   clf = Perceptron()    #use those hyperparameters: eta0 = learning rate, shuffle = shuffle the training data, max_iter=1000
-            #else:
-            #   clf = MLPClassifier() #use those hyperparameters: activation='logistic', learning_rate_init = learning rate,
-            #                          hidden_layer_sizes = number of neurons in the ith hidden layer - use 1 hidden layer with 25 neurons,
-            #                          shuffle = shuffle the training data, max_iter=1000
-            #-->add your Python code here
-
-            #Fit the Neural Network to the training data
+            # fit classifier
             clf.fit(X_training, y_training)
 
-            #make the classifier prediction for each test sample and start computing its accuracy
-            #hint: to iterate over two collections simultaneously with zip() Example:
-            #for (x_testSample, y_testSample) in zip(X_test, y_test):
-            #to make a prediction do: clf.predict([x_testSample])
-            #--> add your Python code here
+            # calc accuracy on test 
+            correct = 0
+            for (x_testSample, y_testSample) in zip(X_test, y_test):
+                pred = clf.predict([x_testSample])[0]
+                if pred == y_testSample:
+                    correct += 1
+            accuracy = correct / len(y_test)
 
-            #check if the calculated accuracy is higher than the previously one calculated for each classifier. If so, update the highest accuracy
-            #and print it together with the network hyperparameters
-            #Example: "Highest Perceptron accuracy so far: 0.88, Parameters: learning rate=0.01, shuffle=True"
-            #Example: "Highest MLP accuracy so far: 0.90, Parameters: learning rate=0.02, shuffle=False"
-            #--> add your Python code here
+            # check/update bests
+            if algo == 'Perceptron':
+                if accuracy > best_acc_perceptron:
+                    best_acc_perceptron = accuracy
+                    best_params_perceptron = (lr, shuffle)
+                    print(f"Highest Perceptron accuracy so far: {best_acc_perceptron:.4f}, "
+                          f"Parameters: learning rate={lr}, shuffle={shuffle}")
+            else:
+                if accuracy > best_acc_mlp:
+                    best_acc_mlp = accuracy
+                    best_params_mlp = (lr, shuffle)
+                    print(f"Highest MLP accuracy so far: {best_acc_mlp:.4f}, "
+                          f"Parameters: learning rate={lr}, shuffle={shuffle}")
 
+# summary
+print("\n=== Search complete ===")
+print(f"Total runs: {total_runs}")
+if best_params_perceptron is not None:
+    print(f"Best Perceptron: accuracy={best_acc_perceptron:.4f}, "
+          f"learning_rate={best_params_perceptron[0]}, shuffle={best_params_perceptron[1]}")
+else:
+    print("No Perceptron results found.")
 
-
-
-
-
-
-
-
-
-
+if best_params_mlp is not None:
+    print(f"Best MLP: accuracy={best_acc_mlp:.4f}, "
+          f"learning_rate={best_params_mlp[0]}, shuffle={best_params_mlp[1]}")
+else:
+    print("No MLP results found.")
